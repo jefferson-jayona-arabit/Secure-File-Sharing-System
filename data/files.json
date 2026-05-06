@@ -1,0 +1,14 @@
+[
+  {
+    "id": "d24d7d3e-afd1-4e9d-a055-a315139f6ea0",
+    "ownerId": "546777c9-d4f3-44dc-a850-9d4e6f96beca",
+    "originalName": "Final-Real-Time-Flood-Detection.pdf",
+    "mimeType": "application/pdf",
+    "size": 6227928,
+    "encryptedAESKey": "O7aBgUAbVn8nSfgjRPOOEfxQU5NzaiQj60sx0tpfWQgAk1ZIoOaAj/6drsVuZmuf7mPDda5bjqDfVOnjxMZXniEh9+Gwpl049sIQvLiCKxgQN3FTdkesh5Ze67bLeRPsu6fc6JbWxnq3Img82vI7EIqhPPkci2jNCa8Xz/CeWjo3LzBNphrtqsMRXWr31hCscVjvwaz5uNoE8HVrZTaFKviB6CvzhU5rGMnIyrOOPmgmFo7rryuN3IhSHMekGMFKx0/4Otd1sbi0ZM2oAMSQVGtzLnJos1PdParSHvD4AB1XGea1J9Ms5onqkWlhSoOzkagh6liQ1rzfr0WZO1hS9Q==",
+    "iv": "b22c129c33f4db78ada60afea25b56f9",
+    "originalHash": "f861baa8a943a7cafa8214eb3a9f1ed295ca94c548763f2921f7d4c9e2583ee9",
+    "uploadedAt": "2026-05-05T23:15:57.599Z",
+    "encryptionAlgorithm": "AES-256-CBC + RSA-OAEP-SHA256"
+  }
+]

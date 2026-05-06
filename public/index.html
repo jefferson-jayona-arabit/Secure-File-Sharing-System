@@ -1,0 +1,1204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VaultShare — Secure File Transfer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0b0d;
+    --surface: #111318;
+    --surface2: #181c23;
+    --border: #232830;
+    --border2: #2e3540;
+    --accent: #00d4aa;
+    --accent2: #0099ff;
+    --danger: #ff4d6d;
+    --warn: #ffb347;
+    --text: #e8eaed;
+    --muted: #7a8494;
+    --mono: 'Space Mono', monospace;
+    --sans: 'DM Sans', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Grid background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,212,170,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,212,170,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* AUTH SCREEN */
+  #auth-screen {
+    position: fixed; inset: 0; z-index: 100;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--bg);
+  }
+
+  .auth-card {
+    width: 420px;
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    border-radius: 12px;
+    padding: 40px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .auth-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--accent), var(--accent2), transparent);
+  }
+
+  .logo {
+    font-family: var(--mono);
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+  }
+
+  .logo-icon {
+    width: 32px; height: 32px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+  }
+
+  .auth-subtitle {
+    color: var(--muted);
+    font-size: 13px;
+    margin-bottom: 32px;
+    font-family: var(--mono);
+  }
+
+  .tab-row {
+    display: flex;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    margin-bottom: 24px;
+  }
+
+  .tab-btn {
+    flex: 1;
+    padding: 10px;
+    background: transparent;
+    border: none;
+    color: var(--muted);
+    font-family: var(--mono);
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 0.05em;
+  }
+
+  .tab-btn.active {
+    background: var(--surface2);
+    color: var(--accent);
+  }
+
+  .form-group { margin-bottom: 16px; }
+
+  label {
+    display: block;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.08em;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+  }
+
+  input[type="text"], input[type="email"], input[type="password"] {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 12px 14px;
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 13px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  input:focus { border-color: var(--accent); }
+
+  .btn-primary {
+    width: 100%;
+    padding: 13px;
+    background: var(--accent);
+    color: #000;
+    border: none;
+    border-radius: 6px;
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-top: 8px;
+  }
+
+  .btn-primary:hover { background: #00f0c0; transform: translateY(-1px); }
+  .btn-primary:active { transform: translateY(0); }
+
+  .error-msg {
+    background: rgba(255,77,109,0.1);
+    border: 1px solid rgba(255,77,109,0.3);
+    border-radius: 6px;
+    padding: 10px 14px;
+    color: var(--danger);
+    font-family: var(--mono);
+    font-size: 12px;
+    margin-bottom: 16px;
+    display: none;
+  }
+
+  /* MAIN APP */
+  #app { display: none; min-height: 100vh; position: relative; z-index: 1; }
+
+  /* Header */
+  .header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0 32px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky; top: 0; z-index: 50;
+  }
+
+  .header-logo {
+    font-family: var(--mono);
+    font-size: 16px;
+    color: var(--accent);
+    font-weight: 700;
+    display: flex; align-items: center; gap: 10px;
+  }
+
+  .user-info {
+    display: flex; align-items: center; gap: 16px;
+  }
+
+  .user-badge {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    padding: 6px 12px;
+    border-radius: 20px;
+  }
+
+  .btn-logout {
+    background: transparent;
+    border: 1px solid var(--border2);
+    color: var(--muted);
+    padding: 6px 14px;
+    border-radius: 6px;
+    font-family: var(--mono);
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 0.05em;
+  }
+
+  .btn-logout:hover { border-color: var(--danger); color: var(--danger); }
+
+  /* Main layout */
+  .main {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 32px 24px;
+    display: grid;
+    grid-template-columns: 340px 1fr;
+    gap: 24px;
+  }
+
+  /* Panel */
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+
+  .panel-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .panel-header .dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%,100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  /* Upload zone */
+  .upload-zone {
+    margin: 20px;
+    border: 2px dashed var(--border2);
+    border-radius: 10px;
+    padding: 32px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.25s;
+    position: relative;
+  }
+
+  .upload-zone:hover, .upload-zone.drag-over {
+    border-color: var(--accent);
+    background: rgba(0, 212, 170, 0.04);
+  }
+
+  .upload-zone input[type="file"] {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+    width: 100%;
+    height: 100%;
+  }
+
+  .upload-icon {
+    font-size: 36px;
+    margin-bottom: 12px;
+    display: block;
+  }
+
+  .upload-zone p {
+    font-size: 13px;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+
+  .upload-zone .file-limit {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--border2);
+  }
+
+  /* Encrypt log */
+  .encrypt-log {
+    margin: 0 20px 20px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px;
+    min-height: 120px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    overflow-y: auto;
+    max-height: 200px;
+    display: none;
+  }
+
+  .encrypt-log .log-line {
+    margin-bottom: 4px;
+    opacity: 0;
+    animation: fadeIn 0.3s forwards;
+  }
+
+  @keyframes fadeIn {
+    to { opacity: 1; }
+  }
+
+  .log-line.success { color: var(--accent); }
+  .log-line.info { color: var(--accent2); }
+
+  /* Algo badges */
+  .algo-info {
+    margin: 0 20px 20px;
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .badge {
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.05em;
+  }
+
+  .badge-aes {
+    background: rgba(0,212,170,0.1);
+    border: 1px solid rgba(0,212,170,0.3);
+    color: var(--accent);
+  }
+
+  .badge-rsa {
+    background: rgba(0,153,255,0.1);
+    border: 1px solid rgba(0,153,255,0.3);
+    color: var(--accent2);
+  }
+
+  .badge-hash {
+    background: rgba(255,179,71,0.1);
+    border: 1px solid rgba(255,179,71,0.3);
+    color: var(--warn);
+  }
+
+  /* Files list */
+  .files-list { padding: 12px 0; }
+
+  .file-item {
+    padding: 14px 20px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    cursor: pointer;
+    border-bottom: 1px solid var(--border);
+    transition: background 0.15s;
+  }
+
+  .file-item:last-child { border-bottom: none; }
+  .file-item:hover { background: var(--surface2); }
+  .file-item.selected { background: rgba(0,212,170,0.05); border-left: 3px solid var(--accent); }
+
+  .file-icon {
+    width: 38px; height: 38px;
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+
+  .file-name {
+    font-size: 13px;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 220px;
+  }
+
+  .file-meta {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+
+  .file-actions { margin-left: auto; display: flex; gap: 6px; }
+
+  .btn-icon {
+    width: 30px; height: 30px;
+    border: 1px solid var(--border2);
+    background: transparent;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px;
+    transition: all 0.15s;
+    color: var(--muted);
+  }
+
+  .btn-icon:hover { border-color: var(--accent2); color: var(--accent2); }
+  .btn-icon.danger:hover { border-color: var(--danger); color: var(--danger); }
+
+  /* Right panel - file detail */
+  .detail-panel { display: flex; flex-direction: column; gap: 0; }
+
+  .detail-empty {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px;
+    color: var(--muted);
+    text-align: center;
+  }
+
+  .detail-empty .big-icon { font-size: 64px; margin-bottom: 16px; opacity: 0.3; }
+  .detail-empty p { font-family: var(--mono); font-size: 12px; }
+
+  .detail-content { padding: 24px; display: none; }
+
+  .detail-filename {
+    font-size: 20px;
+    font-weight: 600;
+    margin-bottom: 6px;
+    word-break: break-all;
+  }
+
+  .detail-section {
+    margin-top: 20px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .detail-section-header {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .detail-row {
+    display: flex;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    font-size: 12px;
+    gap: 12px;
+  }
+
+  .detail-row:last-child { border-bottom: none; }
+
+  .detail-key {
+    font-family: var(--mono);
+    color: var(--muted);
+    min-width: 120px;
+    font-size: 11px;
+  }
+
+  .detail-val {
+    font-family: var(--mono);
+    color: var(--text);
+    font-size: 11px;
+    word-break: break-all;
+  }
+
+  .btn-download {
+    width: 100%;
+    margin-top: 20px;
+    padding: 13px;
+    background: transparent;
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    border-radius: 8px;
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  .btn-download:hover { background: var(--accent); color: #000; }
+
+  /* Empty state */
+  .empty-files {
+    padding: 40px 20px;
+    text-align: center;
+    color: var(--muted);
+    font-family: var(--mono);
+    font-size: 12px;
+  }
+
+  /* Loading spinner */
+  .spinner {
+    width: 16px; height: 16px;
+    border: 2px solid transparent;
+    border-top-color: currentColor;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    display: inline-block;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    bottom: 24px; right: 24px;
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    border-radius: 8px;
+    padding: 14px 18px;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text);
+    z-index: 999;
+    transform: translateY(80px);
+    opacity: 0;
+    transition: all 0.3s;
+    max-width: 320px;
+  }
+
+  .toast.show { transform: translateY(0); opacity: 1; }
+  .toast.success { border-color: rgba(0,212,170,0.5); color: var(--accent); }
+  .toast.error { border-color: rgba(255,77,109,0.5); color: var(--danger); }
+
+  /* Upload progress */
+  .upload-progress {
+    margin: 0 20px 16px;
+    display: none;
+  }
+
+  .progress-bar-bg {
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .progress-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    border-radius: 2px;
+    width: 0%;
+    transition: width 0.3s;
+  }
+
+  .progress-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--muted);
+    margin-bottom: 6px;
+    display: flex;
+    justify-content: space-between;
+  }
+
+  .upload-btn-wrap { margin: 0 20px 20px; }
+
+  .btn-upload {
+    width: 100%;
+    padding: 11px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    color: #000;
+    border: none;
+    border-radius: 6px;
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    transition: opacity 0.2s;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  .btn-upload:hover { opacity: 0.9; }
+
+  .selected-file-name {
+    margin: 0 20px 10px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--accent);
+    padding: 8px 12px;
+    background: rgba(0,212,170,0.08);
+    border: 1px solid rgba(0,212,170,0.2);
+    border-radius: 6px;
+    display: none;
+    align-items: center;
+    gap: 8px;
+  }
+
+  /* Security indicators */
+  .security-bar {
+    display: flex;
+    gap: 8px;
+    padding: 12px 20px;
+    background: rgba(0,0,0,0.2);
+    border-top: 1px solid var(--border);
+    flex-wrap: wrap;
+  }
+
+  .sec-item {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .sec-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--accent); }
+</style>
+</head>
+<body>
+
+<!-- AUTH SCREEN -->
+<div id="auth-screen">
+  <div class="auth-card">
+    <div class="logo">
+      <div class="logo-icon">🔐</div>
+      VaultShare
+    </div>
+    <div class="auth-subtitle">// AES-256 + RSA-2048 Hybrid Encryption</div>
+
+    <div class="tab-row">
+      <button class="tab-btn active" onclick="switchTab('login')">LOGIN</button>
+      <button class="tab-btn" onclick="switchTab('register')">REGISTER</button>
+    </div>
+
+    <div id="auth-error" class="error-msg"></div>
+
+    <!-- Login Form -->
+    <div id="login-form">
+      <div class="form-group">
+        <label>Email Address</label>
+        <input type="email" id="login-email" placeholder="user@example.com" />
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="login-password" placeholder="••••••••••" />
+      </div>
+      <button class="btn-primary" onclick="doLogin()">ACCESS VAULT</button>
+    </div>
+
+    <!-- Register Form -->
+    <div id="register-form" style="display:none">
+      <div class="form-group">
+        <label>Full Name</label>
+        <input type="text" id="reg-name" placeholder="Juan dela Cruz" />
+      </div>
+      <div class="form-group">
+        <label>Email Address</label>
+        <input type="email" id="reg-email" placeholder="user@example.com" />
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="reg-password" placeholder="Min. 8 characters" />
+      </div>
+      <button class="btn-primary" onclick="doRegister()">CREATE ACCOUNT + GENERATE RSA KEYS</button>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div id="app">
+  <div class="header">
+    <div class="header-logo">
+      <div class="logo-icon" style="width:28px;height:28px;font-size:13px">🔐</div>
+      VaultShare
+    </div>
+    <div class="user-info">
+      <div class="user-badge" id="header-user">user@example.com</div>
+      <button class="btn-logout" onclick="doLogout()">LOGOUT</button>
+    </div>
+  </div>
+
+  <div class="main">
+    <!-- Left: Upload + File List -->
+    <div style="display:flex;flex-direction:column;gap:20px">
+      <!-- Upload Panel -->
+      <div class="panel">
+        <div class="panel-header">
+          <div class="dot"></div>
+          UPLOAD & ENCRYPT
+        </div>
+
+        <div class="upload-zone" id="drop-zone">
+          <input type="file" id="file-input" onchange="onFileSelect(this)" />
+          <span class="upload-icon">📁</span>
+          <p>Drop file here or click to browse</p>
+          <span class="file-limit">MAX 50MB · AES-256 encrypted on upload</span>
+        </div>
+
+        <div class="selected-file-name" id="selected-file-display">
+          <span>📎</span><span id="selected-file-text"></span>
+        </div>
+
+        <div class="upload-progress" id="upload-progress">
+          <div class="progress-label">
+            <span>Encrypting & uploading...</span>
+            <span id="progress-pct">0%</span>
+          </div>
+          <div class="progress-bar-bg">
+            <div class="progress-bar-fill" id="progress-fill"></div>
+          </div>
+        </div>
+
+        <div class="upload-btn-wrap">
+          <button class="btn-upload" id="upload-btn" onclick="doUpload()">
+            🔒 ENCRYPT & UPLOAD
+          </button>
+        </div>
+
+        <div class="encrypt-log" id="encrypt-log"></div>
+
+        <div class="algo-info">
+          <span class="badge badge-aes">AES-256-CBC</span>
+          <span class="badge badge-rsa">RSA-OAEP-2048</span>
+          <span class="badge badge-hash">SHA-256 Integrity</span>
+        </div>
+
+        <div class="security-bar">
+          <div class="sec-item"><div class="sec-dot"></div> E2E Encrypted</div>
+          <div class="sec-item"><div class="sec-dot"></div> JWT Auth</div>
+          <div class="sec-item"><div class="sec-dot"></div> bcrypt Passwords</div>
+        </div>
+      </div>
+
+      <!-- Files Panel -->
+      <div class="panel">
+        <div class="panel-header">
+          <div class="dot" style="background:var(--accent2)"></div>
+          YOUR ENCRYPTED FILES
+          <span id="file-count" style="margin-left:auto;color:var(--border2)">0 files</span>
+        </div>
+        <div class="files-list" id="files-list">
+          <div class="empty-files">No files yet. Upload your first file above.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: File Detail -->
+    <div class="panel detail-panel">
+      <div class="panel-header">
+        <div class="dot" style="background:var(--warn)"></div>
+        FILE DETAILS
+      </div>
+
+      <div class="detail-empty" id="detail-empty">
+        <div class="big-icon">🔐</div>
+        <p>Select a file to view<br>encryption details</p>
+      </div>
+
+      <div class="detail-content" id="detail-content"></div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+let authToken = localStorage.getItem('vaultshare_token');
+let currentUser = JSON.parse(localStorage.getItem('vaultshare_user') || 'null');
+let selectedFile = null;
+let selectedFileId = null;
+
+// Init
+if (authToken && currentUser) showApp();
+
+function showApp() {
+  document.getElementById('auth-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  document.getElementById('header-user').textContent = currentUser.email;
+  loadFiles();
+}
+
+function switchTab(tab) {
+  document.querySelectorAll('.tab-btn').forEach((b,i) => b.classList.toggle('active', (i===0&&tab==='login')||(i===1&&tab==='register')));
+  document.getElementById('login-form').style.display = tab === 'login' ? '' : 'none';
+  document.getElementById('register-form').style.display = tab === 'register' ? '' : 'none';
+  document.getElementById('auth-error').style.display = 'none';
+}
+
+async function doLogin() {
+  const email = document.getElementById('login-email').value.trim();
+  const password = document.getElementById('login-password').value;
+  clearAuthError();
+  if (!email || !password) return showAuthError('Please fill in all fields');
+  try {
+    const res = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    });
+    const data = await res.json();
+    if (!res.ok) return showAuthError(data.error);
+    authToken = data.token;
+    currentUser = data.user;
+    localStorage.setItem('vaultshare_token', authToken);
+    localStorage.setItem('vaultshare_user', JSON.stringify(currentUser));
+    showApp();
+  } catch { showAuthError('Connection failed'); }
+}
+
+async function doRegister() {
+  const name = document.getElementById('reg-name').value.trim();
+  const email = document.getElementById('reg-email').value.trim();
+  const password = document.getElementById('reg-password').value;
+  clearAuthError();
+  if (!name || !email || !password) return showAuthError('Please fill in all fields');
+  if (password.length < 6) return showAuthError('Password must be at least 6 characters');
+  try {
+    const res = await fetch('/api/auth/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, email, password })
+    });
+    const data = await res.json();
+    if (!res.ok) return showAuthError(data.error);
+    authToken = data.token;
+    currentUser = data.user;
+    localStorage.setItem('vaultshare_token', authToken);
+    localStorage.setItem('vaultshare_user', JSON.stringify(currentUser));
+    showApp();
+  } catch { showAuthError('Connection failed'); }
+}
+
+function doLogout() {
+  localStorage.removeItem('vaultshare_token');
+  localStorage.removeItem('vaultshare_user');
+  authToken = null; currentUser = null;
+  document.getElementById('auth-screen').style.display = '';
+  document.getElementById('app').style.display = 'none';
+}
+
+function showAuthError(msg) {
+  const el = document.getElementById('auth-error');
+  el.textContent = '⚠ ' + msg;
+  el.style.display = 'block';
+}
+
+function clearAuthError() {
+  document.getElementById('auth-error').style.display = 'none';
+}
+
+// File input handling
+function onFileSelect(input) {
+  if (input.files[0]) {
+    selectedFile = input.files[0];
+    const nameEl = document.getElementById('selected-file-display');
+    document.getElementById('selected-file-text').textContent = `${selectedFile.name} (${formatSize(selectedFile.size)})`;
+    nameEl.style.display = 'flex';
+    document.getElementById('upload-btn').style.display = 'flex';
+    document.getElementById('encrypt-log').style.display = 'none';
+  }
+}
+
+// Drag and drop
+const dz = document.getElementById('drop-zone');
+dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('drag-over'); });
+dz.addEventListener('dragleave', () => dz.classList.remove('drag-over'));
+dz.addEventListener('drop', e => {
+  e.preventDefault();
+  dz.classList.remove('drag-over');
+  const f = e.dataTransfer.files[0];
+  if (f) {
+    selectedFile = f;
+    document.getElementById('selected-file-text').textContent = `${f.name} (${formatSize(f.size)})`;
+    document.getElementById('selected-file-display').style.display = 'flex';
+    document.getElementById('upload-btn').style.display = 'flex';
+  }
+});
+
+async function doUpload() {
+  if (!selectedFile) return;
+  const logEl = document.getElementById('encrypt-log');
+  const progressEl = document.getElementById('upload-progress');
+  const fillEl = document.getElementById('progress-fill');
+  const pctEl = document.getElementById('progress-pct');
+  const btn = document.getElementById('upload-btn');
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> ENCRYPTING...';
+  logEl.innerHTML = '';
+  logEl.style.display = 'block';
+  progressEl.style.display = 'block';
+
+  const addLog = (text, type = 'info', delay = 0) => {
+    setTimeout(() => {
+      const line = document.createElement('div');
+      line.className = `log-line ${type}`;
+      line.textContent = text;
+      logEl.appendChild(line);
+      logEl.scrollTop = logEl.scrollHeight;
+    }, delay);
+  };
+
+  addLog('› Initiating secure upload pipeline...', 'info', 0);
+  addLog(`› File: ${selectedFile.name} (${formatSize(selectedFile.size)})`, 'info', 200);
+
+  // Animate progress
+  let pct = 0;
+  const progressAnim = setInterval(() => {
+    pct = Math.min(pct + Math.random() * 8, 85);
+    fillEl.style.width = pct + '%';
+    pctEl.textContent = Math.round(pct) + '%';
+  }, 150);
+
+  try {
+    const formData = new FormData();
+    formData.append('file', selectedFile);
+
+    const res = await fetch('/api/files/upload', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + authToken },
+      body: formData
+    });
+
+    clearInterval(progressAnim);
+    fillEl.style.width = '100%';
+    pctEl.textContent = '100%';
+
+    const data = await res.json();
+    if (!res.ok) {
+      addLog('✗ Upload failed: ' + data.error, 'error', 100);
+      showToast(data.error, 'error');
+    } else {
+      (data.log || []).forEach((line, i) => addLog(line, 'success', i * 300));
+      setTimeout(() => {
+        loadFiles();
+        showToast('File encrypted & uploaded!', 'success');
+        selectedFile = null;
+        document.getElementById('file-input').value = '';
+        document.getElementById('selected-file-display').style.display = 'none';
+        document.getElementById('upload-btn').style.display = 'none';
+      }, (data.log.length * 300) + 300);
+    }
+  } catch (e) {
+    clearInterval(progressAnim);
+    addLog('✗ Error: ' + e.message, 'error');
+    showToast('Upload failed', 'error');
+  }
+
+  btn.disabled = false;
+  btn.innerHTML = '🔒 ENCRYPT & UPLOAD';
+}
+
+async function loadFiles() {
+  try {
+    const res = await fetch('/api/files', {
+      headers: { Authorization: 'Bearer ' + authToken }
+    });
+    const data = await res.json();
+    renderFiles(data.files || []);
+  } catch {}
+}
+
+function renderFiles(files) {
+  const el = document.getElementById('files-list');
+  document.getElementById('file-count').textContent = files.length + ' file' + (files.length !== 1 ? 's' : '');
+  if (!files.length) {
+    el.innerHTML = '<div class="empty-files">No encrypted files yet.</div>';
+    return;
+  }
+  el.innerHTML = files.map(f => `
+    <div class="file-item ${selectedFileId === f.id ? 'selected' : ''}" onclick="selectFile('${f.id}', this)">
+      <div class="file-icon">${getFileEmoji(f.name)}</div>
+      <div style="min-width:0;flex:1">
+        <div class="file-name">${escHtml(f.name)}</div>
+        <div class="file-meta">${formatSize(f.size)} · ${formatDate(f.uploadedAt)}</div>
+      </div>
+      <div class="file-actions" onclick="event.stopPropagation()">
+        <button class="btn-icon" title="Download" onclick="downloadFile('${f.id}','${escHtml(f.name)}')">⬇</button>
+        <button class="btn-icon danger" title="Delete" onclick="deleteFile('${f.id}')">🗑</button>
+        <button class="btn-icon" title="Download Encrypted" onclick="downloadEncrypted('${f.id}','${escHtml(f.name)}')">🔒</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+async function selectFile(id, el) {
+  selectedFileId = id;
+
+  // Remove selected from all, add to clicked
+  document.querySelectorAll('.file-item').forEach(item => item.classList.remove('selected'));
+  if (el) el.classList.add('selected');
+
+  try {
+    const res = await fetch(`/api/files/${id}/info`, {
+      headers: { Authorization: 'Bearer ' + authToken }
+    });
+
+    if (!res.ok) {
+      showToast('Could not load file info', 'error');
+      return;
+    }
+
+    const f = await res.json();
+
+    document.getElementById('detail-empty').style.display = 'none';
+    const dc = document.getElementById('detail-content');
+    dc.style.display = 'block';
+    dc.innerHTML = `
+      <div class="detail-filename">${escHtml(f.name)}</div>
+      <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
+        <span class="badge badge-aes">AES-256-CBC</span>
+        <span class="badge badge-rsa">RSA-OAEP</span>
+        <span class="badge badge-hash">SHA-256</span>
+      </div>
+
+      <div class="detail-section">
+        <div class="detail-section-header">📋 File Info</div>
+        <div class="detail-row"><span class="detail-key">File name</span><span class="detail-val">${escHtml(f.name)}</span></div>
+        <div class="detail-row"><span class="detail-key">Size</span><span class="detail-val">${formatSize(f.size)}</span></div>
+        <div class="detail-row"><span class="detail-key">Uploaded</span><span class="detail-val">${formatDate(f.uploadedAt)}</span></div>
+      </div>
+
+      <div class="detail-section">
+        <div class="detail-section-header">🔐 Encryption Details</div>
+        <div class="detail-row"><span class="detail-key">Algorithm</span><span class="detail-val">${escHtml(f.algorithm)}</span></div>
+        <div class="detail-row"><span class="detail-key">AES IV (partial)</span><span class="detail-val">${escHtml(f.iv)}</span></div>
+        <div class="detail-row"><span class="detail-key">Enc. AES key</span><span class="detail-val">${escHtml(f.encryptedKeyPreview)}</span></div>
+      </div>
+
+      <div class="detail-section">
+        <div class="detail-section-header">🔍 Integrity</div>
+        <div class="detail-row"><span class="detail-key">SHA-256 Hash</span><span class="detail-val" style="color:var(--accent)">${escHtml(f.integrityHash)}</span></div>
+      </div>
+
+      <div style="display:flex;gap:10px;margin-top:20px">
+        <button class="btn-download" style="flex:1" onclick="downloadFile('${f.id}','${escHtml(f.name)}')">
+          ⬇ DECRYPT & DOWNLOAD
+        </button>
+        <button class="btn-download" style="flex:1;border-color:var(--warn);color:var(--warn)"
+          onmouseover="this.style.background='var(--warn)';this.style.color='#000'"
+          onmouseout="this.style.background='transparent';this.style.color='var(--warn)'"
+          onclick="downloadEncrypted('${f.id}','${escHtml(f.name)}')">
+          🔒 DOWNLOAD ENCRYPTED
+        </button>
+      </div>
+    `;
+  } catch (err) {
+    showToast('Error loading file details', 'error');
+    console.error(err);
+  }
+}
+
+async function downloadFile(id, name) {
+  showToast('Decrypting file...', '');
+  try {
+    const res = await fetch(`/api/files/${id}/download`, {
+      headers: { Authorization: 'Bearer ' + authToken }
+    });
+    if (!res.ok) {
+      const d = await res.json();
+      return showToast(d.error, 'error');
+    }
+    const integrity = res.headers.get('X-Integrity-Check');
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = name; a.click();
+    URL.revokeObjectURL(url);
+    showToast(integrity === 'PASSED' ? '✓ Downloaded — Integrity PASSED' : '⚠ Downloaded — Integrity FAILED', integrity === 'PASSED' ? 'success' : 'error');
+  } catch { showToast('Download failed', 'error'); }
+}
+
+async function downloadEncrypted(id, name) {
+  showToast('Fetching encrypted file...', '');
+  try {
+    const res = await fetch(`/api/files/${id}/download-encrypted`, {
+      headers: { Authorization: 'Bearer ' + authToken }
+    });
+    if (!res.ok) {
+      const d = await res.json();
+      return showToast(d.error, 'error');
+    }
+    const algorithm = res.headers.get('X-Algorithm');
+    const ivPreview = res.headers.get('X-IV-Preview');
+    const encSize = res.headers.get('X-Encrypted-Size');
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = name + '.enc';
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast(`✓ Encrypted file downloaded (${formatSize(parseInt(encSize))})`, 'success');
+  } catch {
+    showToast('Encrypted download failed', 'error');
+  }
+}
+
+async function deleteFile(id) {
+  if (!confirm('Delete this encrypted file permanently?')) return;
+  const res = await fetch(`/api/files/${id}`, {
+    method: 'DELETE',
+    headers: { Authorization: 'Bearer ' + authToken }
+  });
+  if (res.ok) {
+    if (selectedFileId === id) {
+      document.getElementById('detail-empty').style.display = '';
+      document.getElementById('detail-content').style.display = 'none';
+      selectedFileId = null;
+    }
+    loadFiles();
+    showToast('File deleted', 'success');
+  }
+}
+
+// Helpers
+function formatSize(bytes) {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024*1024) return (bytes/1024).toFixed(1) + ' KB';
+  return (bytes/(1024*1024)).toFixed(1) + ' MB';
+}
+
+function formatDate(iso) {
+  return new Date(iso).toLocaleDateString('en-PH', { month:'short', day:'numeric', year:'numeric', hour:'2-digit', minute:'2-digit' });
+}
+
+function getFileEmoji(name) {
+  const ext = name.split('.').pop().toLowerCase();
+  const m = { pdf:'📄', doc:'📝', docx:'📝', xls:'📊', xlsx:'📊', png:'🖼', jpg:'🖼', jpeg:'🖼', gif:'🖼', mp4:'🎬', mp3:'🎵', zip:'🗜', txt:'📃', js:'💻', py:'💻', html:'💻' };
+  return m[ext] || '📁';
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+let toastTimer;
+function showToast(msg, type = '') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast show ' + type;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 3500);
+}
+
+// Enter key on auth
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter') {
+    if (document.getElementById('login-form').style.display !== 'none') doLogin();
+    else doRegister();
+  }
+});
+</script>
+</body>
+</html>
